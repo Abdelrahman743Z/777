@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>لعبة الطائرة الفضائية</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="game-container">
+        <div class="ui-overlay">
+            <div class="score-board">
+                <div class="score">النقاط: <span id="score">0</span></div>
+                <div class="hint">⬅️➡️ استخدم الأسهم أو WASD للتحرك</div>
+            </div>
+            <div class="status-bar">
+                <div class="status-label">الصحة</div>
+                <div class="health-bar">
+                    <div class="health-bar-fill" id="healthBarFill"></div>
+                </div>
+                <div class="health-value" id="healthValue">100%</div>
+            </div>
+            <div class="game-info" id="gameInfo">
+                <div class="start-screen">
+                    <h1>🚀 لعبة الطائرة الفضائية</h1>
+                    <div class="instructions">
+                        <h3>كيفية اللعب:</h3>
+                        <div class="instruction-item">
+                            <span class="icon">📱</span>
+                            <span>المس الشاشة أو اسحب لتحريك الطائرة</span>
+                        </div>
+                        <div class="instruction-item">
+                            <span class="icon">⌨️</span>
+                            <span>استخدم الأسهم أو WASD للتحرك بالكيبورد</span>
+                        </div>
+                        <div class="instruction-item">
+                            <span class="icon">🔫</span>
+                            <span>الطائرة تطلق تلقائياً ويمكنك الضغط على زر الإطلاق</span>
+                        </div>
+                        <div class="instruction-item">
+                            <span class="icon">🎯</span>
+                            <span>دمر المركبات الفضائية لتحصل على نقاط</span>
+                        </div>
+                        <div class="instruction-item">
+                            <span class="icon">⚡</span>
+                            <span>تجنب الاصطدام للحفاظ على صحتك</span>
+                        </div>
+                    </div>
+                    <button id="startBtn" class="start-btn">🎮 ابدأ اللعبة</button>
+                </div>
+            </div>
+            <div class="game-over" id="gameOver">
+                <h2>انتهت اللعبة!</h2>
+                <p>النقاط النهائية: <span id="finalScore">0</span></p>
+                <button id="restartBtn" class="start-btn">لعب مرة أخرى</button>
+            </div>
+        </div>
+        <canvas id="gameCanvas"></canvas>
+        <div class="controls">
+            <button class="control-btn" id="shootBtn">إطلاق</button>
+        </div>
+    </div>
+    <script src="game.js"></script>
+</body>
+
+</html>
