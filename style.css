@@ -80,19 +80,19 @@ body {
 
 .status-bar {
     position: absolute;
-    bottom: 12px;
+    bottom: 20px;
     left: 50%;
     transform: translateX(-50%);
-    width: min(92%, 520px);
+    width: min(90%, 500px);
     display: flex;
     align-items: center;
     gap: 12px;
-    background: rgba(0, 0, 0, 0.55);
-    padding: 14px 22px;
-    border-radius: 36px;
-    border: 1px solid rgba(255, 255, 255, 0.28);
-    -webkit-backdrop-filter: blur(14px);
-    backdrop-filter: blur(14px);
+    background: rgba(0, 0, 0, 0.45);
+    padding: 12px 20px;
+    border-radius: 30px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
     color: #fff;
     pointer-events: none;
     z-index: 25;

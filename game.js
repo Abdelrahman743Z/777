@@ -42,6 +42,7 @@ let player = null;
 let bullets = [];
 let enemies = [];
 let explosions = [];
+let powerUps = [];
 
 // Touch Controls
 let touchX = 0;
@@ -57,6 +58,8 @@ class Player {
         this.y = canvas.height - this.height - 20;
         this.speed = 0.45; // pixels per millisecond
         this.color = '#4facfe';
+        this.fireRate = 300; // milliseconds between shots (lower = faster)
+        this.dualShot = false; // whether to shoot two bullets
     }
 
     update(deltaTime) {
@@ -122,7 +125,22 @@ class Player {
     }
 
     shoot() {
-        bullets.push(new Bullet(this.x + this.width / 2, this.y, -1));
+        const centerX = this.x + this.width / 2;
+        if (this.dualShot) {
+            // Shoot two bullets side by side
+            bullets.push(new Bullet(centerX - 12, this.y, -1));
+            bullets.push(new Bullet(centerX + 12, this.y, -1));
+        } else {
+            bullets.push(new Bullet(centerX, this.y, -1));
+        }
+    }
+
+    upgradeFireRate() {
+        this.fireRate = Math.max(100, this.fireRate - 50); // Increase fire rate (decrease delay)
+    }
+
+    enableDualShot() {
+        this.dualShot = true;
     }
 
     getBounds() {
@@ -293,6 +311,117 @@ class Explosion {
     }
 }
 
+// PowerUp Class
+class PowerUp {
+    constructor(x, y, type) {
+        this.x = x;
+        this.y = y;
+        this.width = 40; // Increased size for better visibility
+        this.height = 40;
+        this.speed = 2; // Slightly faster
+        this.type = type; // 'fireRate' or 'dualShot'
+        this.rotation = 0;
+        this.pulse = 0;
+    }
+
+    update() {
+        this.y += this.speed;
+        this.rotation += 0.05;
+        this.pulse += 0.1;
+    }
+
+    draw() {
+        ctx.save();
+        ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
+
+        const pulseScale = 1 + Math.sin(this.pulse) * 0.1;
+        const glowColor = this.type === 'fireRate' ? '#ff9800' : '#00bcd4';
+
+        // Draw glow effect
+        ctx.globalAlpha = 0.3;
+        ctx.fillStyle = glowColor;
+        ctx.beginPath();
+        ctx.arc(0, 0, this.width / 2 * pulseScale * 1.3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1.0;
+
+        ctx.rotate(this.rotation);
+
+        if (this.type === 'fireRate') {
+            // Fire rate power-up - orange/red color
+            const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, this.width / 2);
+            gradient.addColorStop(0, '#ffeb3b');
+            gradient.addColorStop(0.5, '#ff9800');
+            gradient.addColorStop(1, '#ff6f00');
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(0, 0, this.width / 2 * pulseScale, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.strokeStyle = '#ff6f00';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Draw lightning bolt shape
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.moveTo(-3, -8);
+            ctx.lineTo(2, -8);
+            ctx.lineTo(-2, 0);
+            ctx.lineTo(3, 0);
+            ctx.lineTo(-1, 8);
+            ctx.lineTo(-4, 8);
+            ctx.lineTo(1, 0);
+            ctx.lineTo(-3, 0);
+            ctx.closePath();
+            ctx.fill();
+        } else if (this.type === 'dualShot') {
+            // Dual shot power-up - blue/cyan color
+            const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, this.width / 2);
+            gradient.addColorStop(0, '#81d4fa');
+            gradient.addColorStop(0.5, '#00bcd4');
+            gradient.addColorStop(1, '#0097a7');
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(0, 0, this.width / 2 * pulseScale, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.strokeStyle = '#0097a7';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Draw two bullets
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(-8, -6, 4, 12);
+            ctx.fillRect(4, -6, 4, 12);
+
+            // Add circles on bullets
+            ctx.fillStyle = '#00bcd4';
+            ctx.beginPath();
+            ctx.arc(-6, -4, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(6, -4, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        ctx.restore();
+    }
+
+    isOffScreen() {
+        return this.y > canvas.height;
+    }
+
+    getBounds() {
+        return {
+            x: this.x,
+            y: this.y,
+            width: this.width,
+            height: this.height
+        };
+    }
+}
+
 // Collision Detection
 function checkCollision(obj1, obj2) {
     const rect1 = obj1.getBounds();
@@ -310,12 +439,23 @@ function initGame() {
     bullets = [];
     enemies = [];
     explosions = [];
+    powerUps = [];
     score = 0;
     health = 100;
     enemySpawnTimer = 0;
     isTouching = false;
     resetKeyState();
     updateUI();
+}
+
+// Spawn power-up when enemy is killed
+function spawnPowerUp(x, y) {
+    // 60% chance to spawn a power-up (increased for better gameplay)
+    if (Math.random() < 0.6) {
+        const types = ['fireRate', 'dualShot'];
+        const type = types[Math.floor(Math.random() * types.length)];
+        powerUps.push(new PowerUp(x, y, type));
+    }
 }
 
 function updateGame(deltaTime) {
@@ -348,8 +488,11 @@ function updateGame(deltaTime) {
 
         // Check collision with player
         if (checkCollision(player, enemy)) {
+            const enemyX = enemy.x + enemy.width / 2;
+            const enemyY = enemy.y + enemy.height / 2;
             health -= 10;
-            explosions.push(new Explosion(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2));
+            explosions.push(new Explosion(enemyX, enemyY));
+            spawnPowerUp(enemyX, enemyY);
             enemies.splice(i, 1);
             updateUI();
             if (health <= 0) {
@@ -372,7 +515,10 @@ function updateGame(deltaTime) {
             for (let j = enemies.length - 1; j >= 0; j--) {
                 const enemy = enemies[j];
                 if (checkCollision(bullet, enemy)) {
-                    explosions.push(new Explosion(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2));
+                    const enemyX = enemy.x + enemy.width / 2;
+                    const enemyY = enemy.y + enemy.height / 2;
+                    explosions.push(new Explosion(enemyX, enemyY));
+                    spawnPowerUp(enemyX, enemyY);
                     enemies.splice(j, 1);
                     bullets.splice(i, 1);
                     score += 10;
@@ -400,6 +546,48 @@ function updateGame(deltaTime) {
             explosions.splice(i, 1);
         }
     }
+
+    // Update power-ups (iterate backwards to safely remove items)
+    for (let i = powerUps.length - 1; i >= 0; i--) {
+        const powerUp = powerUps[i];
+        powerUp.update();
+
+        // Check collision with player (with slightly larger collision box for easier collection)
+        const powerUpBounds = powerUp.getBounds();
+        const playerBounds = player.getBounds();
+
+        // Expand collision box by 5 pixels for easier collection
+        const expandedBounds = {
+            x: powerUpBounds.x - 5,
+            y: powerUpBounds.y - 5,
+            width: powerUpBounds.width + 10,
+            height: powerUpBounds.height + 10
+        };
+
+        const expandedPlayerBounds = {
+            x: playerBounds.x - 5,
+            y: playerBounds.y - 5,
+            width: playerBounds.width + 10,
+            height: playerBounds.height + 10
+        };
+
+        if (expandedBounds.x < expandedPlayerBounds.x + expandedPlayerBounds.width &&
+            expandedBounds.x + expandedBounds.width > expandedPlayerBounds.x &&
+            expandedBounds.y < expandedPlayerBounds.y + expandedPlayerBounds.height &&
+            expandedBounds.y + expandedBounds.height > expandedPlayerBounds.y) {
+
+            if (powerUp.type === 'fireRate') {
+                player.upgradeFireRate();
+            } else if (powerUp.type === 'dualShot') {
+                player.enableDualShot();
+            }
+            powerUps.splice(i, 1);
+            // Visual feedback - add a small explosion
+            explosions.push(new Explosion(powerUp.x + powerUp.width / 2, powerUp.y + powerUp.height / 2));
+        } else if (powerUp.isOffScreen()) {
+            powerUps.splice(i, 1);
+        }
+    }
 }
 
 function drawGame() {
@@ -415,6 +603,10 @@ function drawGame() {
 
         bullets.forEach(bullet => bullet.draw());
         enemies.forEach(enemy => enemy.draw());
+        // Draw power-ups
+        powerUps.forEach(powerUp => {
+            powerUp.draw();
+        });
         explosions.forEach(explosion => explosion.draw());
     }
 }
@@ -593,7 +785,7 @@ let autoShootTimer = 0;
 function autoShoot(deltaTime) {
     if (gameState === 'playing' && player) {
         autoShootTimer += deltaTime;
-        if (autoShootTimer >= 300) { // Shoot every 300ms
+        if (autoShootTimer >= player.fireRate) {
             player.shoot();
             autoShootTimer = 0;
         }
